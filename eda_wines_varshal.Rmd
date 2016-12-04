@@ -1,0 +1,906 @@
+Wine Quality Exploration by Alona Varshal
+========================================================
+
+Having worked previously on wines, I chose the red and white wines data set. I combined the two using the rbind() command after removing the variable "X", adding a variable "type" having a value of 1 for red wines and 0 for white wines. The new data set, wines, have 13 features which include type and quality which were both converted from integer to factor variables. The goal of this exploratory analysis is to determine which features contribute to the most separation of the different values of quality of wines.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, packages}
+# Load all of the packages that you end up using
+# in your analysis in this code chunk.
+
+# Notice that the parameter "echo" was set to FALSE for this code chunk.
+# This prevents the code from displaying in the knitted HTML output.
+# You should set echo=FALSE for all code chunks in your file.
+
+library(ggplot2)
+library(GGally)
+library(scales)
+library(memisc)
+library(gridExtra)
+library(psych)
+library(plyr)
+library(corrplot)
+```
+
+```{r echo=FALSE, Load_the_Data}
+# Load the Data
+setwd('~/DataScience/udacity/dand/explore_summarize_data/project/')
+redwine <- read.csv('wineQualityReds.csv')
+whitewine <- read.csv('wineQualityWhites.csv')
+```
+
+```{r echo=FALSE, removing_X}
+redwine$X <- NULL
+whitewine$X <- NULL
+```
+
+```{r echo=FALSE, adding_type}
+redwine$type <- 1
+whitewine$type <- 0
+```
+
+```{r echo=FALSE, combining_wines}
+wines <- rbind(redwine, whitewine)
+```
+
+```{r echo=FALSE, convert_type_factor}
+wines$type <- factor(wines$type)
+```
+
+```{r echo=FALSE, Change_quality_to_Factor_Variable}
+wines$quality.f <- factor(wines$quality, levels = c("3", "4", "5", "6", "7", "8", "9"))
+```
+
+```{r echo=FALSE, orderfactor_quality}
+wines$quality.o <- ordered(wines$quality.f, levels = c("3", "4", "5", "6", "7", "8", "9"))
+```
+
+# Univariate Plots Section
+
+```{r echo=FALSE, dimension_wines_dataframe}
+dim(wines)
+```
+The actual variables are 13. The rest were created from the variable quality to make it an ordered factor variable. Two of the 13 variables (type and quality) are output variables.
+
+```{r echo=FALSE, variables_wines}
+names(wines)
+```
+
+```{r echo=FALSE, structure_data_frame}
+str(wines)
+```
+
+```{r echo=FALSE, levels_quality}
+levels(wines$quality.o)
+```
+
+```{r echo=FALSE, levels_type}
+levels(wines$type)
+```
+
+```{r echo=FALSE, Summary}
+summary(wines)
+```
+
+Most of the data come from white wines (1599 red wine and 4898 white wine observations). Features are physicochemical tests of wines. These are fixed acidity (g tartaric acid/L), volatile acidity (g acetic acid/L), citric acid (g/L), residual sugar (g/L), chlorides (g sodium chloride/L), free sulfur dioxide (mg/L), density (g/mL), pH, sulphates (potassium sulfate, g/L) and alcohol (% by volume). Quality is an output variable which is a score given by a human test panel and has possible value of 1 to 10 with 10 being the best. 
+
+```{r echo=FALSE, histograms}
+ggplot(aes(x = quality.f), data = wines) +
+  geom_histogram(stat = 'count', fill = I('blue')) +
+  ggtitle('Distribution of Wine Qualities') + 
+  theme(text = element_text(size = 10))
+
+ggplot(aes(x = quality.f), data = wines) +
+  geom_histogram(stat = 'count', aes(fill = type)) +
+  scale_fill_brewer(type = 'qual') +
+  facet_wrap( ~ type) +
+  ggtitle('Distribution of Qualities of White (0) and Red (1) Wines in the Wine Quality Data Set') +
+  theme(text = element_text(size = 10))
+```
+
+White wines and red wines have different distributions in some of the variables. Because of this, it was necessary to analyze the reds separately from the whites.
+
+Some variables have normal distribution and some don't. It is surprising to see that in some cases, the variable has normal distribution in red wines but not in white wines (for example, chlorides). The most different distribution between white and reds is the citric acid. 
+
+For some variables, transformation was create a more normal distribution but for other variables, transformation didn't change the distribution.
+
+```{r echo=FALSE, transformations_histograms}
+fixedacidityp3 <- ggplot(aes(x = fixed.acidity), data = wines) +
+  geom_histogram(fill = I('#ddb40d'), color = I('black'), binwidth = 0.2) +
+  scale_x_continuous(breaks = seq(4, 18, 2)) +
+  ggtitle('Fixed Acidity in White (0) and Red (1) Wines') +
+  facet_wrap( ~ type) +
+  theme(text = element_text(size=10))
+
+fixedacidityp2 <- ggplot(aes(x = fixed.acidity), data = wines) +
+  geom_histogram(fill = I('#ddb40d'), color = I('black'), binwidth = 0.05) +
+  scale_x_sqrt() +
+  facet_wrap( ~ type) +
+  ggtitle('Fixed Acidity, sqrt') +
+  theme(text = element_text(size=10)) 
+
+#grid.arrange(fixedacidityp3, fixedacidityp2, ncol = 1)
+fixedacidityp3
+```
+
+```{r echo=FALSE}
+volatileacidityp3 <- ggplot(aes(x = volatile.acidity), data = wines) +
+  geom_histogram(color = I('black'), fill = I ('#d9e570'), binwidth = 0.02) +
+  scale_x_continuous(limits = c(0, 1)) +
+  ggtitle('Volatile Acidity in White (0) and Red (1) Wines') +
+  facet_wrap( ~ type) +
+  theme(text = element_text(size=10))
+volatileacidityp3
+```
+
+```{r echo=FALSE}
+citricacidp3 <- ggplot(aes(x = citric.acid), data = wines) +
+  geom_histogram(color = I('black'), fill = I ('orange'), binwidth = 0.04) +
+  scale_x_continuous(limits = c(0, 1)) +
+  ggtitle('Citric Acid in White (0) and Red (1) Wines') +
+  facet_wrap( ~ type) +
+  theme(text = element_text(size=10))
+
+citricacidp2 <- ggplot(aes(x = citric.acid), data = wines) +
+  geom_histogram(color = I('black'), fill = I ('orange'), binwidth = 0.05) +
+  scale_x_log10() +
+  scale_x_continuous(limits = c(0, 1)) +
+  ggtitle('Citric Acid, log10') +
+  facet_wrap( ~ type) +
+  theme(text = element_text(size=10))
+
+grid.arrange(citricacidp3, citricacidp2)
+```
+
+
+Residual sugar is not normally distributed. Transformation using log10 yields something like a bimodal distribution for white wines.
+```{r echo=FALSE}
+residualsugarp3 <- ggplot(aes(x = residual.sugar), data = wines) +
+  geom_histogram(color = I('black'), fill = I ('#35a1ba'), binwidth = 0.2) +
+  scale_x_continuous(breaks = seq(0, 7, 1), limits = c(0, 7)) +
+  ggtitle('Residual Sugar in White (0) and Red (1) Wines') +
+  facet_wrap( ~ type) +
+  theme(text = element_text(size=10))
+
+residualsugarp2 <- ggplot(aes(x = residual.sugar), data = wines) +
+  geom_histogram(color = I('black'), fill = I ('#35a1ba'), binwidth = 0.05) +
+  scale_x_log10(breaks = c(1,2, 5, 10, 25, 50, 75)) +
+  facet_wrap( ~ type) +
+  ggtitle('Residual Sugar, log10') +
+  theme(text = element_text(size=10))
+
+grid.arrange(residualsugarp3, residualsugarp2, ncol = 1)
+```
+
+Transformation of chlorides variable for the white wines made it a little more normally distributed.
+
+```{r echo=FALSE}
+chloridesp3 <- ggplot(aes(x = chlorides), data = wines) +
+  geom_histogram(color = I('black'), fill = I ('yellow'), binwidth = 0.005) +
+  scale_x_continuous(limits = c(0.025, 0.15), breaks = seq(0.03, 0.15, 0.03)) +
+  ggtitle('Chlorides in White (0) and Red (1) Wines') +
+  facet_wrap( ~ type) +
+  theme(text = element_text(size=10))
+
+chloridesp2 <- ggplot(aes(x = chlorides), data = wines) +
+  geom_histogram(color = I('black'), fill = I ('yellow'), binwidth = 0.05) +
+  scale_x_log10(breaks = c(0.01, 0.02, 0.05, 0.10, 0.2, 0.5)) +
+  facet_wrap( ~ type) +
+  ggtitle('Chlorides, log10') +
+  theme(text = element_text(size=10))
+
+grid.arrange(chloridesp3, chloridesp2, ncol = 1)
+```
+
+Free sulfur dioxide for red wine does not look like a normal curve but transformation didn't result into a normal distribution.
+```{r echo=FALSE}
+freeSO2p3 <- ggplot(aes(x = free.sulfur.dioxide), data = wines) +
+  geom_histogram(color = I('black'), fill = I ('#35ba5d'), binwidth = 5) +
+  ggtitle('Free Sulfur Dioxide in White (0) and Red (1) Wines') +
+  scale_x_continuous(breaks = seq(0, 150, 50), limits = c(0, 150)) +
+  facet_wrap( ~ type) +
+  theme(text = element_text(size=10))
+
+freeSO2p2 <- ggplot(aes(x = free.sulfur.dioxide), data = wines) +
+  geom_histogram(color = I('black'), fill = I ('#35ba5d'), binwidth = 0.05) +
+  scale_x_log10() +
+  facet_wrap(~ type) +
+  ggtitle('Free Sulfur Dioxide, log10') +
+  theme(text = element_text(size=10))
+
+grid.arrange(freeSO2p3, freeSO2p2)
+```
+
+Transformation for the total sulfur dioxide distribution was needed for red wines though it wasn't needed for the white wines.
+
+```{r echo=FALSE}
+totalSO2p3 <- ggplot(aes(x = total.sulfur.dioxide), data = wines) +
+  geom_histogram(color = I('black'), fill = I ('#5d6d3a'), binwidth = 5) +
+  scale_x_continuous(limits = c(0, 300)) +
+  ggtitle('Total Sulfur Dioxide in White (0) and Red (1) Wines') +
+  facet_wrap( ~ type) +
+  theme(text = element_text(size=10))
+
+totalSO2p2 <- ggplot(aes(x = total.sulfur.dioxide), data = wines) +
+  geom_histogram(color = I('black'), fill = I ('#5d6d3a'), binwidth = 0.05) +
+  scale_x_log10() +
+  facet_wrap( ~ type) +
+  ggtitle('Total Sulfur Dioxide, log10') +
+  theme(text = element_text(size=10))
+
+grid.arrange(totalSO2p3, totalSO2p2)
+```
+
+Calculating the ratio of free to total sulfur dioxide created a feature that is normally distributed.
+
+```{r echo=FALSE, freetototalSO2_ratio}
+#Calculating the ratio of free to total SO2.
+wines$ftSO2ratio <- wines$free.sulfur.dioxide / wines$total.sulfur.dioxide
+
+# This new feature has normal distribution.
+ftSO2ratiop <- ggplot(aes(x = ftSO2ratio), data = wines) +
+  geom_histogram(color = I('black'), fill = I('#7cc1b6')) +
+  ggtitle('Free SO2 to Total SO2 Ratio in White (0) and Red (1) Wines') +
+  facet_wrap(~ type) +
+  theme(text = element_text(size=10))
+
+ftSO2ratiop
+```
+
+Transformation of density didn't change the distribution for all wines.
+```{r echo=FALSE}
+densityp3 <- ggplot(aes(x = density), data = wines) +
+  geom_histogram(color = I('black'), fill = I ('#1f61c4'), binwidth = 0.0005) +
+  scale_x_continuous(limits = c(0.985, 1.005)) +
+  facet_wrap( ~ type) +
+  ggtitle('Density in White (0) and Red (1) Wines') +
+  theme(text = element_text(size=10))
+
+densityp2 <- ggplot(aes(x = density), data = wines) +
+  geom_histogram(color = I('black'), fill = I ('#1f61c4'), binwidth = 0.0005) +
+  scale_x_log10() +
+  scale_x_continuous(limits = c(0.985, 1.005)) +
+  facet_wrap(~ type) +
+  ggtitle('Density, log10') +
+  theme(text = element_text(size=10))
+
+grid.arrange(densityp3, densityp2)
+```
+
+pH of all wines have a normal distribution
+```{r echo=FALSE}
+pHp3 <- ggplot(aes(x = pH), data = wines) +
+  geom_histogram(color = I('black'), fill = I ('gray'), binwidth = 0.05) +
+  facet_wrap( ~ type) +
+  ggtitle('pH in White (0) and Red (1) Wines') +
+  theme(text = element_text(size=10))
+pHp3
+```
+
+Transformation of sulphates created a little better distribution.
+```{r echo=FALSE}
+SO4p3 <- ggplot(aes(x = sulphates), data = wines) +
+  geom_histogram(color = I('black'), fill = I ('#1fc42f'), binwidth = 0.05) +
+  scale_x_continuous(limits = c(0.25,1.5)) +
+  ggtitle('Sulphates') +
+  facet_wrap( ~ type) +
+  ggtitle('Sulphates in White (0) and Red (1) Wines')
+  theme(text = element_text(size=10))
+
+SO4p2 <- ggplot(aes(x = sulphates), data = wines) +
+  geom_histogram(color = I('black'), fill = I ('#1fc42f')) +
+  scale_x_log10() +
+  ggtitle('Sulphates, log10') +
+  facet_wrap( ~ type) +
+  theme(text = element_text(size=10))
+
+grid.arrange(SO4p3, SO4p2)
+
+```
+
+Alcohol distribution isn't normal and transformation didn't do much to improve the plot though red wines' distribution seemed to be bimodal.
+```{r echo=FALSE}
+alcoholp3 <- ggplot(aes(x = alcohol), data = wines) +
+  geom_histogram(color = I('black'), fill = I ('#727bd8'), binwidth = 0.2) +
+  facet_wrap( ~ type) +
+  ggtitle('Alcohol in White (0) and Red (1) Wines') +
+  theme(text = element_text(size=10))
+
+alcoholp2 <- ggplot(aes(x = alcohol), data = wines) +
+  geom_histogram(color = I('black'), fill = I ('#727bd8')) +
+  scale_x_log10() +
+  facet_wrap(~type) +
+  ggtitle('Alcohol, log10') +
+  theme(text = element_text(size=10))
+
+grid.arrange(alcoholp3, alcoholp2)
+```
+
+### Boxplots of individual features
+
+These plots show the spread of the data in another way, and show that all features have outliers (not all variables are shown).
+
+```{r echo=FALSE}
+b1 <- ggplot(aes(y = fixed.acidity, x = type, fill = type), data = wines) +
+  geom_boxplot() +
+  ggtitle('Fixed acidity') + 
+  theme(text = element_text(size = 10), legend.position = "none")
+
+b2 <- ggplot(aes(y = volatile.acidity, x = type, fill = type), data = wines) +
+  geom_boxplot() +
+  ggtitle('Volatile acidity') + 
+  theme(text = element_text(size = 10), legend.position = "none")
+
+b3 <- ggplot(aes(y = citric.acid, x = type, fill = type), data = wines) +
+  geom_boxplot() +
+  ggtitle('Citric acid') + 
+  theme(text = element_text(size = 10), legend.position = "none")
+
+b4 <- ggplot(aes(y = residual.sugar, x = type, fill = type), data = wines) +
+  geom_boxplot() +
+  ggtitle('Residual sugar') + 
+  theme(text = element_text(size = 10), legend.position = "none")
+
+b5 <- ggplot(aes(y = chlorides, x = type, fill = type), data = wines) +
+  geom_boxplot() +
+  ggtitle('Chlorides') + 
+  theme(text = element_text(size = 10), legend.position = "none")
+
+b6 <- ggplot(aes(y = free.sulfur.dioxide, x = type, fill = type), data = wines) +
+  geom_boxplot() +
+  ggtitle('Free sulfur dioxide') + 
+  theme(text = element_text(size = 10), legend.position = "none")
+
+b7 <- ggplot(aes(y = total.sulfur.dioxide, x = type, fill = type), data = wines) +
+  geom_boxplot() +
+  ggtitle('Total Sulfur Dioxide') +
+  theme(text = element_text(size = 10), legend.position = "none")
+
+b8 <- ggplot(aes(y = density, x = type, fill = type), data = wines) +
+  geom_boxplot() +
+  ggtitle('Density') +
+  theme(text = element_text(size = 10), legend.position = "none")
+
+b9 <- ggplot(aes(y = pH, x = type, fill = type), data = wines) +
+  geom_boxplot() +
+  ggtitle('pH') +
+  theme(text = element_text(size = 10), legend.position = "none")
+
+b10 <- ggplot(aes(y = sulphates, x = type, fill = type), data = wines) +
+  geom_boxplot() +
+  ggtitle('Sulphates') +
+  theme(text = element_text(size = 10), legend.position = "none")
+
+b11 <- ggplot(aes(y = alcohol, x = type, fill = type), data = wines) +
+  geom_boxplot() +
+  ggtitle('Alcohol') +
+  theme(text = element_text(size = 10), legend.position = "none")
+
+grid.arrange(b9, b4, ncol = 2)
+grid.arrange(b5, b7, ncol = 2)
+grid.arrange(b10, b11, ncol = 2)
+```
+
+# Univariate Analysis
+
+### What is the structure of your dataset?
+
+The resulting "wines"" dataset has 6497 observations and 12 variables after creating it from the red wine and the white wine data sets downloaded from the Udacity project site. 
+
+### What is/are the main feature(s) of interest in your dataset?
+
+Main features are the quality, type, and probably alcohol. Quality was based on a human test panel. It can be seen from the histograms that most wines were classified as 5, 6 and 7. Only a few made the 8 and the 9 classification (only five 9's and none of them were reds). There were 30 worst wines classified as 3. None of the wines were classified as 1, 2 and 10. 
+From the boxplots, all features of wines have outliers. Removing some of the outliers in the plot, we can see a better distribution of the features in all of the wines and that red wines usually have a different distribution from those of the white wines.
+
+### What other features in the dataset do you think will help support your investigation into your feature(s) of interest?
+
+It makes sense to think that levels of all components of wine can determine its quality. Therefore, I think that aside from alcohol, citric acid, fixed acidity (acetic acid content), sulphates and sulfur dioxide levels will contribute to the quality of wines. Some of the features in the data set are related as will be seen in the bivariate section, so picking which variables among those that are related might be a good idea.
+
+### Did you create any new variables from existing variables in the dataset?
+
+To create some of the plots above, I resorted to making a factor (ordered) variable out of "quality". I also thought about creating a ratio between the free sulfur dioxide and the total sulfur dioxide ratio and its distribution is different from the individual features as shown in the histogram for "free to total SO2 ratio" above. One can also calculate a ratio of citric acid to fixed acidity, but when I tried this, there was really no new info I could obtain.
+
+### Of the features you investigated, were there any unusual distributions? Did you perform any operations on the data to tidy, adjust, or change the form of the data? If so, why did you do this?
+
+A lot of the features didn't have a normal distribution and transforming them created distributions that approach the normal curve but not totally. Some didn't change at al.
+
+Fixed acidity is tailing, so transformation was done. The resulting histogram is more normally distributed.
+
+Volatile acidity is skewed to the left and log10 transformation showed the bimodal characteristic of the distribution.
+
+Residual sugar is not normally distributed. Transformation using log10 yielded something like a bimodal distribution.
+
+Chlorides also don't look normally distributed. Transformation made it look better, but it also revealed a bimodal distribution.
+
+Free sulfur dioxide and total sulfur dioxide had non-normal distribution and transformation didn't do anything. But when the ratio of the two have a normal distribution.
+
+Transformation of density also didn't make the distribution better.
+
+Alcohol distribution isn't normal and transformation didn't change the distribution.
+
+Regarding tidying the data, the data have no missing data so I didn't have to manipulate it so as to remove missing data. All I did was combine two csv files, create ordered factor variables and another variable "type".
+
+# Bivariate Plots Section
+
+Correlation matrix for all wines (Spearman)
+```{r echo=FALSE}
+RW <- cor(wines[1:12], method = "spearman")
+corrplot(RW, method = "circle", tl.cex = 0.5)
+```
+
+Correlation matrix for red wines (Spearman)
+
+```{r echo=FALSE}
+R <- cor(redwine[1:12], method = "spearman")
+corrplot(R, method = "number", tl.cex = 0.5)
+```
+
+Correlation matrix for white wines (Spearman)
+
+```{r echo=FALSE}
+W <- cor(whitewine[1:12], method = "spearman")
+corrplot(W, method = "number", tl.cex = 0.5)
+```
+
+For red wines, quality is correlated to volatile acidity, sulphates and alcohol. For white wines, quality is correlated to chlorides, density and alcohol.
+
+There are also correlations existing between some of the input variables. 
+
+For example, density and alcohol have a negative correlation, which makes sense because, since alcohol is less dense than water, if there is more alcohol in a mixture, it is expected to have a lower density that the one with less alcohol. Density is also related to residual sugar. The more sugar there is, the more dense a mixture would be.
+
+pH would expectedly be correlated with fixed acidity, volatile acidity and citric acid. So are total and free sulfur dioxide.
+
+So choosing the best features that help the most in classifying wines would be a good idea.
+
+But it is surprising to me that the correlations are sometimes different for the two types of wine.
+
+The following plots explore the correlation of quality and some of the input variables.
+
+```{r echo=FALSE, quality_volatileacidity}
+
+ggplot(aes(x = quality, y = volatile.acidity), data = wines) +
+  geom_point(position = 'jitter', alpha=0.25, color = I('orange')) +
+  geom_line(stat = 'summary', fun.y = median) +
+  scale_x_continuous(breaks = c(3,4,5,6,7,8)) +
+  scale_y_continuous(limits = c(0, 1)) +
+  facet_wrap( ~ type) +
+  ggtitle('Quality vs. volatile acidity in white (0) and red (1) wines') +
+  theme(text = element_text(size = 10))
+```
+
+
+```{r echo=FALSE, quality_chlorides}
+ggplot(aes(x = quality, y = chlorides), data = wines) +
+  geom_point(position = 'jitter', alpha=0.25, color = I('#953bdb')) +
+  geom_line(stat = 'summary', fun.y = median) +
+  scale_x_continuous(breaks = c(3,4,5,6,7,8)) +
+  scale_y_continuous(limits = c(0, 0.125)) +
+  facet_wrap( ~ type) +
+  ggtitle('Quality vs. chlorides in white (0) and red (1) wines') +
+  theme(text = element_text(size = 10))
+```
+
+```{r echo=FALSE, quality_sulphates}
+ggplot(aes(x = quality, y = sulphates), data = wines) +
+  geom_point(position = 'jitter', alpha=0.25, color = I('#3a9960')) +
+  geom_line(stat = 'summary', fun.y = median) +
+  scale_x_continuous(breaks = c(3,4,5,6,7,8)) +
+  scale_y_continuous(limits = c(0.25, 0.8)) +
+  facet_wrap( ~ type) +
+  ggtitle('Quality vs. sulphates in white (0) and red (1) wines') +
+  theme(text = element_text(size = 10))
+```
+
+```{r echo=FALSE, quality_alcohol}
+ggplot(aes(x = quality, y = alcohol), data = wines) +
+  geom_point(position = 'jitter', alpha=0.25, color = I('#4b67bc')) +
+  geom_line(stat = 'summary', fun.y = median) +
+  scale_x_continuous(breaks = c(3,4,5,6,7,8)) +
+  facet_wrap( ~ type) +
+  ggtitle('Quality vs. alcohol in white (0) and red (1) wines') +
+  theme(text = element_text(size = 10))
+
+```
+
+```{r echo=FALSE, quality_density}
+ggplot(aes(x = quality, y = density), data = wines) +
+  geom_point(position = 'jitter', alpha=0.25, color = I('#b52f81')) +
+  geom_line(stat = 'summary', fun.y = median) +
+  scale_x_continuous(breaks = c(3,4,5,6,7,8)) +
+  scale_y_continuous(limits = c(0.985, 1.002)) +
+  facet_wrap(~ type) +
+  ggtitle('Quality vs. density in white (0) and red (1) wines') +
+  theme(text = element_text(size = 10))
+```
+
+Correlation among some input variables:
+
+```{r echo=FALSE, citricacid_fa}
+c1 <- ggplot(aes(x = fixed.acidity, y = pH), data = wines) +
+  geom_point(aes(color = quality.f)) +
+  geom_smooth(method = 'lm', color = '#85878c') +
+  facet_grid( quality.f ~ type) +
+  theme(text = element_text(size = 10), legend.position = "none") +
+  scale_color_brewer(type = 'qual') +
+  ggtitle('Citric acid vs. pH')
+```
+
+```{r echo=FALSE, residualsugar_density}
+c2 <- ggplot(aes(x = residual.sugar, y = density), data = wines) +
+  geom_point(aes(color = quality.f)) +
+  scale_x_continuous(limits = c(0, 20)) +
+  geom_smooth(method = 'lm', color = '#85878c') +
+  facet_grid( quality.f ~ type) +
+  theme(text = element_text(size = 10)) +
+  scale_color_brewer(type = 'qual') +
+  ggtitle('Residual sugar vs. density')
+```
+
+```{r}
+grid.arrange(c1, c2, ncol=2)
+```
+
+```{r echo=FALSE, freeSO2_totalSO2}
+c3 <- ggplot(aes(x = total.sulfur.dioxide, y = free.sulfur.dioxide), data = wines) +
+  geom_point(aes(color = quality.f)) +
+  scale_x_continuous(limits = c(0,300)) +
+  geom_smooth(method = 'lm', color = '#85878c') +
+  facet_grid( quality.f ~ type) +
+  theme(text = element_text(size = 10), legend.position = "none") +
+  scale_color_brewer(type = 'qual') +
+  ggtitle('Total sulfur dioxide vs. free sulfur dioxide')
+
+c4 <- ggplot(aes(x = citric.acid, y = fixed.acidity), data = wines) +
+  geom_point(aes(color = quality.f)) +
+  scale_x_continuous(limits = c(0, 1)) +
+  geom_smooth(method = 'lm', color = '#85878c') +
+  facet_grid( quality.f ~ type) +
+  theme(text = element_text(size = 10)) +
+  scale_color_brewer(type = 'qual') +
+  ggtitle('Citric acid vs. fixed acidity')
+
+grid.arrange(c3, c4, ncol =2 )
+```
+
+# Bivariate Analysis
+
+### Talk about some of the relationships you observed in this part of the investigation. How did the feature(s) of interest vary with other features in the dataset?
+
+Initially, I found it hard to extract the most number of correlations if all types wines are analyzed together. But learning how to create the matrix correlation I did above made it easier for me to pinpoint which input variables can contribute to classification of wine quality. These are alcohol, volatile acidity, chlorides and density.
+
+But as I found out different types have different behaviors in different features, I did the analysis separately. Using a correlation matrix again, I was able to find which input variables correlate to quality in both wines. As mentioned above, quality correlates to volatile acidity, sulphates and alcohol for red wines, and chlorides, density and alcohol for white wines. These have the highest values of correlation coefficients (Spearman method). 
+
+### Did you observe any interesting relationships between the other features (not the main feature(s) of interest)?
+
+The correlation matrix shows which input variables are correlated to another input variable. It is really surprising for me to find that sometimes, a pair of input variables may be correlated in red wines and not in white wines and vice versa. I plotted the ones that are correlated in both wines, except for the citric acid vs. fixed acidity, above. 
+
+### What was the strongest relationship you found?
+
+The strongest relationships between the output variable (quality) and input variables is the alcohol content in both wines.
+
+Among input variables, the strongest are density and alcohol; free and total sulfur dioxide; density and residual sugar. The rest of the following pairs are found to have correlations at a lower extent than the pairs just mentioned:
+
+- pH and fixed acidity
+- citric acid and fixed acidity
+- chlorides and density
+- citric acid and volatile acidity (for red wines only)
+- citric acid and pH (reds only)
+- sulphates and volatile acidity (reds only)
+- alcohol and residual sugar (whites only)
+- total sulfur dioxide and density (whites only)
+- alcohol and chlorides (whites only)
+- alcohol and total sulfur dioxide (whites only)
+
+# Multivariate Plots Section
+
+Scatter plots of alcohol vs. other input variables in red and white wines
+```{r echo=FALSE}
+s1 <- ggplot(aes(x = alcohol, y = volatile.acidity), data = wines) +
+  geom_point(aes(color = type), alpha = 0.25) +
+  scale_color_brewer(type = 'qual') +
+  theme(text = element_text(size = 10), legend.position = "none")
+
+s2 <- ggplot(aes(x = alcohol, y = sulphates), data = wines) +
+  geom_point(aes(color = type), alpha = 0.25) +
+  scale_color_brewer(type = 'qual') +
+  theme(text = element_text(size = 10), legend.position = "none")
+
+s3 <- ggplot(aes(x = alcohol, y = pH), data = wines) +
+  geom_point(aes(color = type), alpha = 0.25) +
+  scale_color_brewer(type = 'qual') +
+  theme(text = element_text(size = 10), legend.position = "none")
+
+s4 <- ggplot(aes(x = alcohol, y = citric.acid), data = wines) +
+  geom_point(aes(color = type), alpha = 0.25) +
+  scale_color_brewer(type = 'qual') +
+  theme(text = element_text(size = 10), legend.position = "none")
+
+s5 <- ggplot(aes(x = alcohol, y = fixed.acidity), data = wines) +
+  geom_point(aes(color = type), alpha = 0.25) +
+  scale_color_brewer(type = 'qual') +
+  theme(text = element_text(size = 10), legend.position = "none")
+
+s6 <- ggplot(aes(x = alcohol, y = free.sulfur.dioxide), data = wines) +
+  geom_point(aes(color = type), alpha = 0.25) +
+  scale_y_log10() +
+  scale_color_brewer(type = 'qual') +
+  theme(text = element_text(size = 10), legend.position = "none")
+
+s7 <- ggplot(aes(x = alcohol, y = residual.sugar), data = wines) +
+  geom_point(aes(color = type), alpha = 0.25) +
+  scale_y_log10() +
+  scale_color_brewer(type = 'qual') +
+  theme(text = element_text(size = 10), legend.position = "none")
+
+s8 <- ggplot(aes(x = alcohol, y = chlorides), data = wines) +
+  geom_point(aes(color = type), alpha = 0.25) +
+  scale_y_log10() +
+  scale_color_brewer(type = 'qual') +
+  theme(text = element_text(size = 10), legend.position = "none")
+
+s9 <- ggplot(aes(x = alcohol, y = total.sulfur.dioxide), data = wines) +
+  geom_point(aes(color = type), alpha = 0.25) + 
+  scale_y_continuous(limits = c(0, 300)) +
+  scale_color_brewer(type = 'qual') +
+  theme(text = element_text(size = 8), legend.position = "none")
+
+s10 <- ggplot(aes(x = alcohol, y = density), data = wines) +
+  geom_point(aes(color = type), alpha = 0.25) +
+  scale_y_log10(limits=c(0.988, 1.001)) +
+  scale_color_brewer(type = 'qual') +
+  theme(text = element_text(size = 10))
+
+grid.arrange(s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, ncol = 4)
+
+```
+
+Classification of all wine by quality:
+
+Analyzing all wines using alcohol, chlorides and volatile acidity:
+
+```{r echo=FALSE}
+ma <- ggplot(aes(x = alcohol, y = chlorides/volatile.acidity), data = wines) +
+  geom_point(aes(color = quality.f)) +
+  scale_y_log10() +
+  scale_x_log10() +
+  scale_color_brewer(type = 'qual') +
+  ggtitle('Alcohol vs. Chlorides/Volatile acidity in All Wines') +
+  theme(text = element_text(size = 10))
+
+ma
+```
+
+(Using density did not create a better plot.)
+
+Classification of red wines by quality: 
+
+From the correlation matrix above, red wine quality is influenced more by volatile.acidity, alcohol and sulphates.
+
+```{r echo=FALSE, alcohol_volatileacidity_multivariate}
+ggplot(aes(x = alcohol, y = volatile.acidity), data = wines) +
+  geom_point(aes(color = quality.f)) +
+  scale_y_continuous(limits = c(0, 0.8)) +
+  scale_x_sqrt(breaks = seq(8, 14, 1)) +
+  scale_color_brewer(type = 'qual') +
+  facet_wrap(~ type) +
+  ggtitle('Alcohol vs. Volatile Acidity in White and Red Wines') +
+  theme(text = element_text(size = 10))
+```
+
+```{r echo=FALSE, alcohol_sulphates_multivariate}
+ggplot(aes(x = alcohol, y = sulphates), data = wines) +
+  geom_point(aes(color = quality.f)) +
+  scale_y_continuous(limits = c(0.25, 1)) +
+  scale_x_log10() +
+  scale_color_brewer(type = 'qual') +
+  facet_wrap(~ type) +
+  ggtitle('Alcohol vs. Sulphates in White and Red Wines') +
+  theme(text = element_text(size = 10))
+```
+
+Red wines are more separated than white white wine by these varibles. 
+
+Combining all three variables to classify the quality of red wines only:
+
+```{r echo=FALSE}
+mr <- ggplot(aes(x = alcohol, y = sulphates/volatile.acidity), data = subset(wines, type == 1)) +
+  geom_point(aes(color = quality.f)) +
+  scale_y_log10() +
+  scale_x_log10() +
+  scale_color_brewer(type = 'qual') +
+  ggtitle('Alcohol vs. Sulphates/Volatile.acidity in Red Wines') +
+  theme(text = element_text(size = 8))
+
+mr
+```
+
+Since volatile acidity is related to pH (in theory):
+
+```{r echo=FALSE}
+ggplot(aes(x = alcohol, y = sulphates/pH), data = subset(wines, type == 1)) +
+  geom_point(aes(color = quality.f)) +
+  scale_y_log10() +
+  scale_x_log10() +
+  scale_color_brewer(type = 'qual') +
+  ggtitle('Alcohol vs. Sulphates/pH in Red Wines') +
+  theme(text = element_text(size = 10))
+```
+
+```{r echo=FALSE}
+ggplot(aes(x = alcohol, y = sulphates/total.sulfur.dioxide), data = subset(wines, type == 1)) +
+  geom_point(aes(color = quality.f)) +
+  scale_y_log10() +
+  scale_x_log10() +
+  scale_color_brewer(type = 'qual') +
+  ggtitle('Alcohol vs. Sulphates/total sulfur dioxide in Red Wines') +
+  theme(text = element_text(size = 10))
+```
+
+Classification of white wines by quality:
+
+To see how white wine quality is influenced by chlorides, density and alcohol, I plot the following.
+
+```{r echo=FALSE}
+ggplot(aes(x = alcohol, y = chlorides), data = wines) +
+  geom_point(aes(color = quality.f)) +
+  scale_y_log10(limits = c(0.013, 0.1)) +
+  scale_x_log10() +
+  scale_color_brewer(type = 'qual') +
+  facet_wrap( ~ type) +
+  ggtitle('Alcohol vs. Chlorides in White and Red Wines') +
+  theme(text = element_text(size = 10))
+```
+
+```{r echo=FALSE}
+ggplot(aes(x = alcohol, y = density), data = wines) +
+  geom_point(aes(color = quality.f)) +
+  scale_y_log10(limits = c(0.988, 1)) +
+  scale_x_log10() +
+  scale_color_brewer(type = 'qual') +
+  facet_wrap( ~ type) +
+  ggtitle('Alcohol vs. Density in White and Red Wines') +
+  theme(text = element_text(size = 10))
+```
+
+It seems like white wines are not as properly separated by these variables.
+
+Since residual sugar is highly correlated with density in white wines:
+
+```{r echo=FALSE}
+ggplot(aes(x = alcohol, y = residual.sugar), data = wines) +
+  geom_point(aes(color = quality.f)) +
+  scale_y_continuous(limits = c(1, 20)) +
+  scale_x_log10() +
+  scale_color_brewer(type = 'qual') +
+  facet_wrap( ~ type) +
+  ggtitle('Alcohol vs. Residual Sugar in White and Red Wines') +
+  theme(text = element_text(size = 10))
+```
+
+```{r echo=FALSE}
+ggplot(aes(x = alcohol, y = density/chlorides), data = subset(wines, type == 0)) +
+  geom_point(aes(color = quality.f)) +
+  scale_y_log10() +
+  scale_x_log10() +
+  scale_color_brewer(type = 'qual') +
+  ggtitle('Alcohol vs. Density/Chlorides in White Wines') +
+  theme(text = element_text(size = 10))
+```
+
+Another attempt using residual sugar/chlorides ratio:
+
+```{r echo=FALSE}
+mw <- ggplot(aes(x = alcohol, y = residual.sugar/chlorides), data = subset(wines, type == 0)) +
+  geom_point(aes(color = quality.f)) +
+  scale_y_log10() +
+  scale_x_log10() +
+  scale_color_brewer(type = 'qual') +
+  ggtitle('Alcohol vs. Residual Sugar/Chlorides in White Wines') +
+  theme(text = element_text(size = 8))
+
+mw
+```
+
+Reading the literature where the data came from, it mentioned that sulphates had the highest input to the classification (using support vector machines):
+
+```{r echo=FALSE}
+ggplot(aes(x = alcohol, y = sulphates), data = subset(wines, type == 0)) +
+  geom_point(aes(color = quality.f)) +
+  scale_y_log10() +
+  scale_x_log10() +
+  scale_color_brewer(type = 'qual') +
+  ggtitle('Alcohol vs. Sulphates in White Wines') +
+  theme(text = element_text(size = 10))
+```
+
+It looked like this has a better effect in separating the qualities of white wines.
+
+# Multivariate Analysis
+
+#### Talk about some of the relationships you observed in this part of the investigation. Were there features that strengthened each other in terms of looking at your feature(s) of interest?
+
+Of all the input variables, alcohol content and volatile acidity and total sulfur dioxide probably best separate red wines from white wines, judging from the scatter plots above. pH and residual sugar definitely cannot determine whether a wine is red or white.
+
+For red wines, using the ratio of the variables that had the highest correlation coefficient with quality increased the separation of the qualities of red wines. It was harder for white wines. The correlation of density with residual sugar helped by swapping the density with residual sugar in the classification of white wines. Other swaps can be done in a similar fashion to see if the qualities of wine can be separated in the two-dimensional plot. Maybe if using a three-dimensional plot, a better classification can be obtained. Separation is easier to view by just looking at the colors of quality values of 5, 6, and 7. Perhaps because these were most represented in the data, they were better classified in the plot.
+
+#### Were there any interesting or surprising interactions between features?
+
+It is surprising to see that residual sugar didn't give a high correlation with quality while it was able to help in contributing to the classification of the qualities of white wines. But it is interesting to be able to swap a feature with a feature it correlates with and classification seems to improve.
+
+# Final Plots and Summary
+
+#### Plot One
+```{r echo=FALSE, Plot_One}
+ggplot(aes(x = quality.f), data = wines) +
+  geom_histogram(stat = 'count', aes(fill = type)) +
+  scale_fill_brewer(type = 'qual') +
+  facet_wrap( ~ type) +
+  ggtitle('Distribution of Qualities of White (0) and Red (1) Wines in the Wine Quality Data Set') +
+  theme(text = element_text(size = 10))
+```
+
+#### Description One
+In the wines data set, majority of the observations are white wines. Most of the wines fall under the quality values of 5, 6, and 7. There are only a few 9's and all are white wines.
+
+#### Plot Two
+Correlation matrix of all wines
+
+```{r echo=FALSE, Plot_Two}
+RW <- cor(wines[1:12], method = "spearman")
+corrplot(RW, method = "circle", tl.cex = 0.5)
+```
+
+#### Description Two
+Wine quality is correlated to volatile acidity, chlorides, density and alcohol (using the Spearman method). However, red wines have different correlations than white wines.
+
+#### Plot Three
+```{r echo=FALSE, Plot_Three}
+mr
+mw
+ma
+```
+
+#### Description Three
+
+Features that can separate qualities of wines are alcohol content, chlorides, and volatile acidity. Features that classify red wines from white wines are alcohol and total sulfur dioxide or volatile acidity. To classify red wines by quality, the features that contribute most are alcohol, volatile acidity and sulphates. To classify red wines by quality, the features that contribute most are alcohol, chlorides and density or residual sugar.
+
+------
+
+# Reflection
+
+I obtained the wines data set by combining two csv files and explored the 11 input variables with respect to the output variable (quality) and also to the newly created variable "type". From initial exploration, I found that the different input variables influence red wine quality differently from the white wine quality. I then resorted to examining the different types of wines separately, although it is really easy to determine which from the input variables contribute to the type of wines (white wines from red wines). Classification of wines can be done by determining the correlation of input variables to quality. The input variables with the highest correlation coefficient with quality were chosen in the multivariate plot to see the separation among the different quality values of red and white wines. Red wines were easily classified while white wines were a little more challenging. Machine learning techniques will probably better to use in analyzing this type of data.
+
+# References
+
+P. Cortez, A. Cerdeira, F. Almeida, T. Matos and J. Reis. Modeling wine preferences by data mining from physicochemical properties. In Decision Support Systems, Elsevier, 47(4):547-553. ISSN: 0167-9236.
+
+Archived: in R, how do I append two data files?
+https://kb.iu.edu/d/bcrr
+
+Factor variables
+http://statistics.ats.ucla.edu/stat/r/modules/factor_variables.htm
+
+Adding and removing columns from a data frame
+http://www.cookbook-r.com/Manipulating_data/Adding_and_removing_columns_from_a_data_frame/
+
+Exploratory data analysis and data pre-processing:
+https://onlinecourses.science.psu.edu/stat857/print/book/export/html/224
+
+Practical Winery & Vineyard Journal (Jan/Feb 2009):
+http://www.practicalwinery.com/janfeb09/page2.htm
+
+Exploratory Data Analysis on Wine Quality by Bilal Mahmood
+https://rpubs.com/Bilal_Mahmood/EDA
+
+Wine Quality Analysis:
+http://rstudio-pubs-static.s3.amazonaws.com/24803_abbae17a5e154b259f6f9225da6dade0.html
+
+Correlation matrix
+http://www.cookbook-r.com/Graphs/Correlation_matrix/
+
+An introduction to corrplot package
+https://cran.r-project.org/web/packages/corrplot/vignettes/corrplot-intro.html
+
+Diamonds exploration by Chris Saden:
+https://s3.amazonaws.com/udacity-hosted-downloads/ud651/diamondsExample.html
+
+----------
