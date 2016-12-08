@@ -8,3 +8,5 @@ I combined two csv files and modified the data frame slightly to remove the obse
 My primary goal is to determine which input variables mostly affect wine quality. I determined this by calculating the correlation coefficients of all input variables with quality. 
 
 ## NOTE: List of References are in the RMD and HTML file
+
+Edited as per first evaluation, 12/7/16
